@@ -3,10 +3,17 @@ import { BigNumber, providers, Wallet } from 'ethers'
 
 require('dotenv').config()
 
-const CHAIN_ID = 5
-const provider = new providers.InfuraProvider(CHAIN_ID)
+// FakeArtMinter contract on Goerli
+const testContract = '0x20EE855E43A7af19E407E39E5110c2C1Ee41F64D'
 
+// Required data
+const HEX_DATA = '0x1249c58b'
+const CONTRACT_ADDRESS = '0x20EE855E43A7af19E407E39E5110c2C1Ee41F64D'
+
+const CHAIN_ID = 5
 const FLASHBOTS_ENDPOINT = 'https://relay-goerli.flashbots.net'
+
+const provider = new providers.InfuraProvider(CHAIN_ID)
 
 if (process.env.WALLET_PRIVATE_KEY === undefined) {
   console.error('Please provide WALLET_PRIVATE_KEY in .env')
@@ -18,6 +25,24 @@ const wallet = new Wallet(process.env.WALLET_PRIVATE_KEY, provider)
 const GWEI = BigNumber.from(10).pow(9)
 const ETHER = BigNumber.from(10).pow(18)
 
+// Custom gas oracle
+const getAverageGasFromBlock = async (blockNumber: number) => {
+  const block = await provider.getBlockWithTransactions(blockNumber)
+
+  let gasPrices: Array<BigNumber> = block.transactions.map((tx: any) => {
+    return tx.gasPrice
+  })
+
+  let sum: number = 0
+  gasPrices.forEach((gasPrice: BigNumber) => {
+    sum += gasPrice.toNumber()
+  })
+
+  const averageGasPrice: BigNumber = BigNumber.from(Math.round(sum / gasPrices.length))
+
+  return averageGasPrice
+}
+
 const main = async () => {
   const flashbotsProvider = await FlashbotsBundleProvider.create(
     provider, 
@@ -28,7 +53,7 @@ const main = async () => {
   provider.on('block', async (blockNumber) => {
     console.log(blockNumber)
 
-    // Add custom gas oracle
+    const gasPrice = await getAverageGasFromBlock(blockNumber - 1)
 
     const bundleSumbitResponse = await flashbotsProvider.sendBundle([
       {
@@ -36,10 +61,10 @@ const main = async () => {
           chainId: CHAIN_ID,
           type: 2,
           value: ETHER.div(100).mul(3),
-          data: '0x1249c58b',
-          maxFeePerGas: GWEI.mul(3),
+          data: HEX_DATA,
+          maxFeePerGas: gasPrice,
           maxPriorityFeePerGas: GWEI.mul(2),
-          to: '0x20EE855E43A7af19E407E39E5110c2C1Ee41F64D'
+          to: CONTRACT_ADDRESS
         },
         signer: wallet
       }
