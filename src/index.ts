@@ -10,6 +10,10 @@ const testContract = '0x20EE855E43A7af19E407E39E5110c2C1Ee41F64D'
 const HEX_DATA = '0x1249c58b'
 const CONTRACT_ADDRESS = '0x20EE855E43A7af19E407E39E5110c2C1Ee41F64D'
 
+// The amount of which the average gas price will be multiplied for maxFeePerGas
+// => 1.1 equals 10% increase; 1.5 equals 50% increase...
+const GAS_LIMIT_MULTIPLIER = 1.1
+
 const CHAIN_ID = 5
 const FLASHBOTS_ENDPOINT = 'https://relay-goerli.flashbots.net'
 
@@ -53,7 +57,8 @@ const main = async () => {
   provider.on('block', async (blockNumber) => {
     console.log(blockNumber)
 
-    const gasPrice = await getAverageGasFromBlock(blockNumber - 1)
+    const averageGasPrice = await getAverageGasFromBlock(blockNumber - 1)
+    const maxGasPrice = BigNumber.from(Math.round(averageGasPrice.toNumber() * GAS_LIMIT_MULTIPLIER))
 
     const bundleSumbitResponse = await flashbotsProvider.sendBundle([
       {
@@ -62,7 +67,7 @@ const main = async () => {
           type: 2,
           value: ETHER.div(100).mul(3),
           data: HEX_DATA,
-          maxFeePerGas: gasPrice,
+          maxFeePerGas: maxGasPrice,
           maxPriorityFeePerGas: GWEI.mul(2),
           to: CONTRACT_ADDRESS
         },
@@ -74,8 +79,6 @@ const main = async () => {
       console.log(bundleSumbitResponse.error.message)
       return
     }
-
-    console.log(await bundleSumbitResponse.simulate())
   })
 }   
 
