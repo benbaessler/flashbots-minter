@@ -4,11 +4,12 @@ import { BigNumber, providers, Wallet } from 'ethers'
 require('dotenv').config()
 
 // FakeArtMinter contract on Goerli
+const testHexData = '0x1249c58b'
 const testContract = '0x20EE855E43A7af19E407E39E5110c2C1Ee41F64D'
 
 // Required data
-const HEX_DATA = '0x1249c58b'
-const CONTRACT_ADDRESS = '0x20EE855E43A7af19E407E39E5110c2C1Ee41F64D'
+const HEX_DATA = testHexData
+const CONTRACT_ADDRESS = testContract
 
 // The amount of which the average gas price will be multiplied for maxFeePerGas
 // => 1.1 equals 10% increase; 1.5 equals 50% increase...
